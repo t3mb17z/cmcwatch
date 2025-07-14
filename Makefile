@@ -22,4 +22,4 @@ clean:
 	rm -rf $(OBJDIR) $(BINDIR)
 
 install:
-	@mkdir
+	@cp ./bin/cmcwatch ${PREFIX}/bin

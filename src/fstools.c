@@ -17,7 +17,7 @@ int fs_copy(const char *to, const char *from) {
   int saved_errno;
   fd_from = open(from, O_RDONLY);
   if(fd_from < 0) return -1;
-  fd_to = open(to, O_WRONLY | O_CREAT | O_EXCL, 0644);
+  fd_to = open(to, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if(fd_to < 0) goto out_error;
   while(nread = read(fd_from, buf, sizeof buf), nread > 0) {
     char *out_ptr = buf;
@@ -38,6 +38,7 @@ int fs_copy(const char *to, const char *from) {
       goto out_error;
     }
   }
+  return 0;
 out_error:
   saved_errno = errno;
   close(fd_from);

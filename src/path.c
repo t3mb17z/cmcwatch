@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "path.h"
+#include "text.h"
 
 int path_normalize(char *path, char **destpath) {
   if(strcmp(path, "") == 0) {
@@ -76,4 +77,16 @@ int path_append(char **dest, const char *src) {
   }
   strcat(*dest, src);
   return 0;
+}
+
+int path_shift(const char *path, char **destpath) {
+  char **splitted_path = NULL;
+  *destpath = calloc(strlen(path), 1);
+  if(strncmp(path, "/", 1) == 0)
+    (*destpath)[0] = '/';
+  int len = text_split(path, "/", &splitted_path);
+  for(int i = 1; i < len; i++) {
+    strcat(*destpath, splitted_path[i]);
+  }
+  return 1;
 }
