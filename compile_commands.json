@@ -1,0 +1,12 @@
+[
+    {
+        "command": "cc -c -Iinclude -o build/main.o src/main.c",
+        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
+        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/main.c"
+    },
+    {
+        "command": "cc -c -Iinclude -o build/utils.o src/utils.c",
+        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
+        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/utils.c"
+    }
+]
