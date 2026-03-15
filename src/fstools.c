@@ -1,84 +1,79 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#define _GNU_SOURCE
+#define _FILE_OFFSET_BITS 64
 #include <unistd.h>
 #include <libgen.h>
 
 #include "fstools.h"
 #include "path.h"
-#include "text.h"
+#include "vstring.h"
+#include "zds/deque.h"
 
-int fs_copy(const char *to, const char *from) {
-  int fd_from, fd_to;
-  char buf[4096];
-  ssize_t nread;
-  int saved_errno;
-  fd_from = open(from, O_RDONLY);
-  if(fd_from < 0) return -1;
-  fd_to = open(to, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-  if(fd_to < 0) goto out_error;
-  while(nread = read(fd_from, buf, sizeof buf), nread > 0) {
-    char *out_ptr = buf;
-    ssize_t nwritten;
-    do {
-      nwritten = write(fd_to, out_ptr, nread);
-      if(nwritten >= 0) {
-        nread -= nwritten;
-        out_ptr += nwritten;
-      } else if(errno != EINTR) {
-        return -1;
+bool fs_copy(const VPath *to, const VPath *from) {
+  char *in = VPath_to_cstr(to),
+       *out= VPath_to_cstr(from);
+  char buf[8192];
+  ssize_t n;
+
+  int fd_in = open(in, O_RDONLY);
+  int fd_out = open(out, O_WRONLY | O_CREAT | O_TRUNC);
+
+  while((n = read(fd_in, buf, sizeof(buf))) > 0) {
+    char *p = buf;
+    while(n > 0) {
+      ssize_t w = write(fd_out, p, n);
+      if(w < 0) {
+        close(fd_in);
+        close(fd_out);
+        return false;
       }
-    } while (nread > 0);
-  }
-  if(nread == 0) {
-    if(close(fd_to) < 0) {
-      fd_to = -1;
-      goto out_error;
+
+      p += w;
+      n -= w;
     }
   }
-  return 0;
-out_error:
-  saved_errno = errno;
-  close(fd_from);
-  if(fd_to >= 0) close(fd_to);
-  errno = saved_errno;
-  return -1;
+
+  if(n < 0)
+    return false;
+
+  return true;
 }
 
-int fs_mkdir(const char *dir, unsigned int mode, int recursive) {
-  if(strcmp(dir, ".") == 0 || strcmp(dir, "..") == 0) {
-    return 0;
-  }
-  char *path = strdup(dir);
-  char *directories = NULL;
-  char *auxiliar = calloc(strlen(dir) + 1, 1);
-  char **saveptr;
+bool fs_mkdir(const VPath *dir, unsigned int mode, bool recursive) {
+  if(dir == NULL)
+    return false;
 
+  char *path = VPath_to_cstr(dir);
+  bool res = false;
   if(!recursive) {
-    if(mkdir(path, mode) != 0) {
-      free(path); return 0;
-    }
-  } else {
-    path_normalize(path, &directories);
-    int res = text_split(directories, "/", &saveptr);
+    if(mkdir(path, mode) == 0)
+      res = true;
 
-    if(strncmp(directories, "/", 1) == 0)
-      strcat(auxiliar, "/");
-
-    for(int i = 0; i < res; i++) {
-      path_join(auxiliar, saveptr[i], &auxiliar);
-
-      if(access(auxiliar, F_OK) != 0) {
-        if(mkdir(auxiliar, mode) != 0 && errno != EEXIST) {
-          free(auxiliar); free(path);
-          free(directories);
-          return 0;
-        }
-      }
-
-    }
+    free(path);
+    return res;
   }
-  return 1;
+  free(path), path = NULL;
+
+  VString part, full_path;
+  VString_new(&full_path, 4096);
+
+  res = true;
+  for(size_t i = 0; i < VPath_name_count(dir); i++) {
+    ZDeque_at(&dir->_segments, i, &part);
+    VString_append(&full_path, &part);
+    path = VString_to_cstr(&full_path);
+    if(mkdir(path, mode) == 0) {
+      free(path), path = NULL;
+      continue;
+    }
+
+    res = false;
+    free(path);
+    break;
+  }
+
+  return true;
 }

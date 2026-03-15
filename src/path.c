@@ -1,92 +1,206 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "path.h"
-#include "text.h"
+#include "vstring.h"
+#include "zds/deque.h"
 
-int path_normalize(char *path, char **destpath) {
-  if(strcmp(path, "") == 0) {
-    *destpath = strdup("");
-    return 1;
-  }
-  char *path_copy = strdup(path);
-  char *token = strtok(path_copy, "/");
-  if(token == NULL) {
-    *destpath = strdup(path);
-    free(path_copy);
-    return 0;
-  }
+VPathResult VPath_init(VPath *path, const VString *text) {
+  if(path == NULL || text == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
 
-  if(strcmp(token, path) == 0) {
-    *destpath = strdup(path);
-    return 0;
-  }
+  VPath res;
+  VString delim = VString_from_bytes("/");
+  ZDeque_init(&res._segments, VString_len(text), sizeof(VString));
+  if(VString_at(text, 0) == '/')
+    path->_is_absolute = true;
+  VString_split(text, &delim, &res._segments.data);
+  VPath_normalize(&res, path);
 
-  *destpath = calloc(4096, 1);
-  if(*destpath == NULL) {
-    free(path_copy);
-    return 0;
-  }
-
-  if(strncmp(path, "/", 1) == 0)
-    (*destpath)[0] = '/';
-
-  while(token != NULL) {
-    strncat(*destpath, token, strlen(token));
-    token = strtok(NULL, "/");
-    if(token != NULL)
-      strcat(*destpath, "/");
-  }
-  return 1;
+  return VPATH_OK;
 }
 
-int path_join(char *path1, char *path2, char **result) {
-  char *temp1 = NULL, *temp2 = NULL;
-  char *normalized_path = NULL;
-  path_normalize(path1, &temp1);
-  path_normalize(path2, &temp2);
+VPathResult VPath_normalize(const VPath *path, VPath *destpath) {
+  if(path == NULL || destpath == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
 
-  normalized_path = calloc(strlen(temp1) + strlen(temp2) + 2, 1);
-  if(normalized_path == NULL) {
-    free(temp1); free(temp2);
-    return 0;
+  destpath->_is_absolute = path->_is_absolute;
+  ZDeque_init(&destpath->_segments, ZDeque_len(&path->_segments), sizeof(VString));
+  for(size_t i = 0; i < ZDeque_len(&path->_segments); i++) {
+    VString pathbuf, buf, res, empty = VString_from_bytes("");
+    res = VString_from_bytes("/");
+
+    ZDeque_at(&path->_segments, i, &pathbuf);
+    VString_new(&buf, VString_len(&pathbuf));
+    VString_replace(&pathbuf, &res, &empty, &buf);
+
+    pathbuf = VString_from_bytes(".");
+    if(VString_eq(&buf, &pathbuf))
+      continue;
+
+    pathbuf = VString_from_bytes("..");
+    if(VString_eq(&buf, &pathbuf)) {
+      if(!ZDeque_empty(&destpath->_segments))
+        ZDeque_pop_back(&destpath->_segments, NULL);
+      continue;
+    }
+
+    ZDeque_push_back(&destpath->_segments, &buf);
   }
 
-  strncpy(normalized_path, temp1, strlen(temp1));
-  if(temp1[strlen(temp1) - 1] != '/' && strcmp(temp1, "") != 0)
-    strcat(normalized_path, "/");
-
-  strncat(normalized_path, temp2, strlen(temp2));
-  *result = calloc(strlen(normalized_path) + 1, 1);
-  if(*result == NULL) {
-    free(temp1); free(temp2);
-    free(normalized_path);
-    return 0;
-  }
-  path_normalize(normalized_path, result);
-
-  free(temp1); free(temp2);
-  return 1;
+  return VPATH_OK;
 }
 
-int path_append(char **dest, const char *src) {
-  if((*dest)[strlen(*dest)] != '/') {
-    *dest = realloc(*dest, strlen(*dest) + strlen(src) + 1);
-    if(*dest == NULL) return 0;
-    strcat(*dest, "/");
+VPathResult VPath_join(
+  const VPath *path1,
+  const VPath *path2,
+  VPath *result
+) {
+  if(path1 == NULL || path2 == NULL || result == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
+
+  result->_is_absolute = path1->_is_absolute;
+  ZDeque_init(
+    &result->_segments,
+    VPath_name_count(path1) + VPath_name_count(path2),
+    sizeof(VString)
+  );
+
+  for(size_t i = 0; i < VPath_name_count(path1); i++) {
+    VString segment;
+    ZDeque_at(&path1->_segments, i, &segment);
+    ZDeque_push_back(&result->_segments, &segment);
   }
-  strcat(*dest, src);
+
+  for(size_t i = 0; i < VPath_name_count(path2); i++) {
+    VString segment;
+    ZDeque_at(&path2->_segments, i, &segment);
+    ZDeque_push_back(&result->_segments, &segment);
+  }
+
   return 0;
 }
 
-int path_shift(const char *path, char **destpath) {
-  char **splitted_path = NULL;
-  *destpath = calloc(strlen(path), 1);
-  if(strncmp(path, "/", 1) == 0)
-    (*destpath)[0] = '/';
-  int len = text_split(path, "/", &splitted_path);
-  for(int i = 1; i < len; i++) {
-    strcat(*destpath, splitted_path[i]);
+VPathResult VPath_append(VPath *path1, const VPath *path2) {
+  if(path1 == NULL || path2 == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
+
+  if(
+    ZDeque_len(&path1->_segments) +
+    ZDeque_len(&path2->_segments) >
+    ZDeque_cap(&path1->_segments)
+  )
+    return VPATH_ENOT_ENOUGH_SPACE;
+
+  VString temp;
+  for(size_t i = 0; i < ZDeque_len(&path2->_segments); i++) {
+    ZDeque_at(&path2->_segments, i, &temp);
+    ZDeque_push_back(&path1->_segments, &temp);
   }
-  return 1;
+
+  return VPATH_OK;
+}
+
+VPathResult VPath_shift(VPath *path, VString *dest) {
+  if(path == NULL || dest == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
+  if(ZDeque_empty(&path->_segments))
+    return VPATH_ENOT_ENOUGH_SPACE;
+
+  ZDeque_pop_front(&path->_segments, dest);
+
+  return VPATH_OK;
+}
+
+VPathResult VPath_pop(VPath *path, VString *dest) {
+  if(path == NULL || dest == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
+  if(ZDeque_empty(&path->_segments))
+    return VPATH_ENOT_ENOUGH_SPACE;
+
+  ZDeque_pop_back(&path->_segments, dest);
+
+  return VPATH_OK;
+}
+
+size_t VPath_name_count(const VPath *path) {
+  return ZDeque_len(&path->_segments);
+}
+
+char *VPath_to_cstr(const VPath *path) {
+  VString cur, res, slash = VString_from_bytes("/");
+  size_t len = 0;
+  for(size_t i = 0; i < VPath_name_count(path); i++) {
+    ZDeque_at(&path->_segments, i, &cur);
+    len += VString_len(&cur);
+  }
+
+  VString_new(&res, len + VPath_name_count(path) - 1);
+
+  if(path->_is_absolute)
+    VString_append(&res, &slash);
+  for(size_t i = 0; i < VPath_name_count(path); i++) {
+    ZDeque_at(&path->_segments, i, &cur);
+    VString_append(&res, &cur);
+    VString_append(&res, &slash);
+  }
+
+  return VString_to_cstr(&res);
+}
+
+VString VPath_to_VString(const VPath *path) {
+  VString cur, res, slash = VString_from_bytes("/");
+  size_t len = 0;
+  for(size_t i = 0; i < VPath_name_count(path); i++) {
+    ZDeque_at(&path->_segments, i, &cur);
+    len += VString_len(&cur);
+  }
+
+  VString_new(&res, len + VPath_name_count(path) - 1);
+
+  if(path->_is_absolute)
+    VString_append(&res, &slash);
+  for(size_t i = 0; i < VPath_name_count(path); i++) {
+    ZDeque_at(&path->_segments, i, &cur);
+    VString_append(&res, &cur);
+    VString_append(&res, &slash);
+  }
+
+  return res;
+}
+
+VPathResult VPath_raw(VPath *path, int nodes) {
+  if(path == NULL)
+    return VPATH_EUNSPECIFIED_PATH;
+  if(nodes < 1) {
+    *path = (VPath){ 0 };
+    return VPATH_OK;
+  }
+
+  ZDeque_init(&path->_segments, nodes, sizeof(VString));
+  path->_is_absolute = false;
+
+  return VPATH_OK;
+}
+
+VPath VPath_from_cstr(const char *cpath) {
+  if(cpath == NULL)
+    return (VPath){ 0 };
+
+  VPath res;
+  VString vstr = VString_from_bytes(cpath);
+  VPath_init(&res, &vstr);
+
+  return res;
+}
+
+VPathResult VPath_destroy(VPath *path) {
+  if(path == NULL)
+    return VPATH_OK;
+
+  ZDeque_destroy(&path->_segments);
+  path->_is_absolute = false;
+
+  return VPATH_OK;
 }

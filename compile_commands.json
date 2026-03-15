@@ -1,12 +1,17 @@
 [
     {
-        "command": "cc -c -Iinclude -o build/main.o src/main.c",
+        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/main.o src/main.c",
         "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
         "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/main.c"
     },
     {
-        "command": "cc -c -Iinclude -o build/utils.o src/utils.c",
+        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/path.o src/path.c",
         "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
-        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/utils.c"
+        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/path.c"
+    },
+    {
+        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/text.o src/text.c",
+        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
+        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/text.c"
     }
 ]

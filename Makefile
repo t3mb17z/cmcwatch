@@ -1,25 +1,57 @@
+CC = clang
+CFLAGS = -Wall -Wextra -pedantic -std=c99 -Werror
 TARGET = cmcwatch
-CFLAGS = -Iinclude
 
-SRCDIR = src
-OBJDIR = build
-BINDIR = bin
+ARGS ?= 
 
-SRCS = $(wildcard $(SRCDIR)/*.c)
-OBJS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o, $(SRCS))
+BUILD ?= debug
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $(BINDIR)/$@
+LIBS_RAW = m
+LIBS = $(patsubst %,-l%, $(LIBS_RAW))
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Define source directory
+SRC_DIR = src
+BLD_DIR = build
+INC_DIRS_RAW = include
+TEST_DIR = tests
 
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
-	mkdir -p $(BINDIR)
+INC_DIRS = $(patsubst %,-I%, $(INC_DIRS_RAW))
+CFLAGS += $(INC_DIRS)
+
+ifeq ($(BUILD),release)
+	CFLAGS += -O3
+else
+	CFLAGS += -O0 -g -fsanitize=address -fno-omit-frame-pointer
+endif
+
+LDFLAGS = -Llib -lzds
+
+SRCS = $(shell find $(SRC_DIR) -name "*.c")
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(BLD_DIR)/%.o, $(SRCS))
+TESTS = $(shell find $(TEST_DIR) -name "*.c")
+
+# Compile all right now
+all: $(OBJS)
+	@$(CC) $(LDFLAGS) $(LIBS) $^ -o $(TARGET)
+
+$(BLD_DIR)/%.o: $(SRC_DIR)/%.c | $(BLD_DIR)
+	@echo "Compiling file: $< -> $@"
+	@if [ ! -d $(@D) ]; then \
+		echo "Creating directory: $(@D)"; \
+		mkdir -p $(@D); \
+	fi
+	@$(CC) $(CFLAGS) $< -c -o $@
+
+$(BLD_DIR):
+	@echo "Creating '$@' directory"
+	@mkdir $(BLD_DIR)
+
+run:
+	@echo "Running $(TARGET)"
+	@./$(TARGET) $(ARGS)
+
+test:
+	$(CC) $(TESTS)/$(wildcard *.c)
 
 clean:
-	rm -rf $(OBJDIR) $(BINDIR)
-
-install:
-	@cp ./bin/cmcwatch ${PREFIX}/bin
+	@rm -rf $(BLD_DIR) $(TARGET)
