@@ -6,7 +6,7 @@ ARGS ?=
 
 BUILD ?= debug
 
-LIBS_RAW = m
+LIBS_RAW = 
 LIBS = $(patsubst %,-l%, $(LIBS_RAW))
 
 # Define source directory
@@ -17,14 +17,16 @@ TEST_DIR = tests
 
 INC_DIRS = $(patsubst %,-I%, $(INC_DIRS_RAW))
 CFLAGS += $(INC_DIRS)
+LDFLAGS =
 
 ifeq ($(BUILD),release)
 	CFLAGS += -O3
 else
-	CFLAGS += -O0 -g -fsanitize=address -fno-omit-frame-pointer
+	CFLAGS += -O0 -g3 -fsanitize=address,undefined -fno-omit-frame-pointer
+	LDFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
 endif
 
-LDFLAGS = -Llib -lzds
+LDFLAGS += -Llib -lzds
 
 SRCS = $(shell find $(SRC_DIR) -name "*.c")
 OBJS = $(patsubst $(SRC_DIR)/%.c,$(BLD_DIR)/%.o, $(SRCS))

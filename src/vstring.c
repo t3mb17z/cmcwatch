@@ -3,9 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "zds/vec.h"
-
+#include "zds/deque.h"
 #include "vstring.h"
+
+#define DBG(x, z) \
+  char *p = VString_to_cstr((x)); \
+  printf((z "%s\n"), p); free(p)
 
 VStringResult VString_new(VString *buffer, size_t cap) {
   if(buffer == NULL)
@@ -57,7 +60,7 @@ VStringResult VString_append_char(VString *buffer, char chr) {
 VStringResult VString_split(
   const VString *buffer,
   const VString *delim,
-  ZVec *res
+  ZDeque *res
 ) {
   if(buffer == NULL || delim == NULL || res == NULL)
     return VSTRING_ENOBUFFER;
@@ -81,7 +84,7 @@ VStringResult VString_split(
         end = i - start;
         if(end > 0) {
           token = VString_slice(buffer, start, end);
-          ZVec_push(res, &token);
+          ZDeque_push_back(res, &token);
         }
 
         start = i + VString_len(delim);
@@ -92,7 +95,7 @@ VStringResult VString_split(
 
   if(start < VString_len(buffer)) {
     token = VString_slice(buffer, start, VString_len(buffer) - start);
-    ZVec_push(res, &token);
+    ZDeque_push_back(res, &token);
   }
 
   return VSTRING_OK;
@@ -192,6 +195,7 @@ VString VString_from_bytes(const char *text) {
 
   VString buf;
   size_t len = strlen(text);
+  buf._buffer = NULL;
   buf._buffer = realloc(buf._buffer, len);
   memcpy(buf._buffer, text, len);
   buf._cap = len;

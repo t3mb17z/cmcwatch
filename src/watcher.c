@@ -1,5 +1,6 @@
 #include <linux/stat.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
@@ -31,8 +32,10 @@ void watchdog_init(const VPath *path, int fd, ZDeque *wds) {
   while(cur_idx > root_idx) {
     cpath = VPath_to_cstr(&path_copy);
     DIR *dir = opendir(cpath);
-    if(dir == NULL)
+    if(dir == NULL) {
+      cur_idx--;
       continue;
+    }
 
     struct dirent *diren;
     while((diren = readdir(dir)) != NULL) {
@@ -57,9 +60,18 @@ void watchdog_init(const VPath *path, int fd, ZDeque *wds) {
         wdesc.wd = wd;
         VPath_append(&wdesc.dirpath, &buf);
 
+        char *tm = VPath_to_cstr(&buf);
+        printf("Subdirectory found added: %s\n", tm);
+        free(tm);
+
         ZDeque_push_back(wds, &wdesc);
+
+        break;
       }
     }
+
+    cur_idx--;
+    VPath_pop(&path_copy, NULL);
 
     if(cpath != NULL)
       free(cpath);

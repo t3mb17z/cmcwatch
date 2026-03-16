@@ -33,30 +33,38 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Source directory '%s' doesn't exists\n", tmp);
     return 2;
   }
-  free(tmp);
+  free(tmp), tmp = NULL;
 
   tmp = VPath_to_cstr(&destination);
   if(access(tmp, F_OK) != 0) {
     fprintf(stderr, "Destination directory '%s' doesn't exists\n", tmp);
     return 2;
   }
-  free(tmp);
+  free(tmp), tmp = NULL;
 
   char *buf;
-  char *uid = strdup(argv[3]);
-  char *gid = strdup(argv[4]);
+  char *uid, *gid;
+  if(argc > 3) {
+    uid = strdup(argv[3]);
+    gid = strdup(argv[4]);
+  } else {
+    uid = strdup("10269");
+    gid = strdup("1015");
+  }
 
-  int iuid = strtol(uid, &buf, 8);
+  int iuid = strtol(uid, &buf, 10);
   if(*buf != '\0') {
     puts("Invalid number at UID");
     return 1;
   }
 
-  int igid = strtol(gid, &buf, 8);
+  int igid = strtol(gid, &buf, 10);
   if(*buf != '\0') {
     puts("Invalod number at GID");
     return 1;
   }
+  free(uid), free(gid);
+  buf = NULL;
 
   int fd = inotify_init(), count = 0, i = 0;
   if(fd < 0) {
@@ -74,7 +82,7 @@ int main(int argc, char **argv) {
 
   tmp = VPath_to_cstr(&source);
   printf("Watching source directory: '%s' ...\n", tmp);
-  free(tmp);
+  free(tmp), tmp = NULL;
 
   WatchDescriptor wd;
   while(1) {
@@ -85,6 +93,9 @@ int main(int argc, char **argv) {
 
     while(i < nbytes) {
       struct inotify_event *event = (struct inotify_event *)&buffer[i];
+      if(!(event->mask & IN_CLOSE_WRITE))
+        continue;
+
       if(event->len > 0) {
         for(int i = 0; i < count; i++) {
           ZDeque_at(&wds, i, &wd);
@@ -124,7 +135,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  VPath_destroy(&source);
+  VPath_destroy(&destination);
   watchdog_destroy(fd, &wds);
+  close(fd);
 
   return 0;
 }

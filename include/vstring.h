@@ -1,7 +1,7 @@
 #ifndef TEXT_H
 #define TEXT_H
 
-#include "zds/vec.h"
+#include "zds/deque.h"
 #include <stddef.h>
 
 typedef enum _vstring_result {
@@ -30,7 +30,7 @@ VStringResult VString_append_char(VString *buffer, char chr);
 VStringResult VString_split(
   const VString *buffer,
   const VString *delim,
-  ZVec *result
+  ZDeque *result
 );
 VStringResult VString_replace(
   const VString *src,

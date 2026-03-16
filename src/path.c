@@ -6,6 +6,10 @@
 #include "vstring.h"
 #include "zds/deque.h"
 
+#define DBG(x, y, z) \
+  char *p = V##y##_to_cstr((x)); \
+  printf((z "%s\n"), p); free(p)
+
 VPathResult VPath_init(VPath *path, const VString *text) {
   if(path == NULL || text == NULL)
     return VPATH_EUNSPECIFIED_PATH;
@@ -14,8 +18,12 @@ VPathResult VPath_init(VPath *path, const VString *text) {
   VString delim = VString_from_bytes("/");
   ZDeque_init(&res._segments, VString_len(text), sizeof(VString));
   if(VString_at(text, 0) == '/')
-    path->_is_absolute = true;
-  VString_split(text, &delim, &res._segments.data);
+    path->_is_absolute =
+      res._is_absolute = true;
+  else
+    path->_is_absolute =
+      res._is_absolute = false;
+  VString_split(text, &delim, &res._segments);
   VPath_normalize(&res, path);
 
   return VPATH_OK;
@@ -136,7 +144,7 @@ char *VPath_to_cstr(const VPath *path) {
     len += VString_len(&cur);
   }
 
-  VString_new(&res, len + VPath_name_count(path) - 1);
+  VString_new(&res, len + VPath_name_count(path));
 
   if(path->_is_absolute)
     VString_append(&res, &slash);
@@ -189,6 +197,8 @@ VPath VPath_from_cstr(const char *cpath) {
     return (VPath){ 0 };
 
   VPath res;
+  if(*cpath == '/')
+    res._is_absolute = true;
   VString vstr = VString_from_bytes(cpath);
   VPath_init(&res, &vstr);
 
