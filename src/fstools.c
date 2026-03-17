@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#define _GNU_SOURCE
-#define _FILE_OFFSET_BITS 64
+#include <fcntl.h>
 #include <unistd.h>
 #include <libgen.h>
 

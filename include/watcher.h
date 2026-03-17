@@ -8,7 +8,9 @@ typedef struct {
   VPath dirpath;
 } WatchDescriptor;
 
-void watchdog_init(const VPath *path, int fd, ZDeque *wds);
+typedef void (*watchdog_cb)(const char *str);
+
+void watchdog_init(const VPath *root, int fd, ZDeque *wds, watchdog_cb cb);
 void watchdog_destroy(int fd, ZDeque *wds);
 
 #endif

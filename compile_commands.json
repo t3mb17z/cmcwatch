@@ -1,17 +1,112 @@
 [
-    {
-        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/main.o src/main.c",
-        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
-        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/main.c"
-    },
-    {
-        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/path.o src/path.c",
-        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
-        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/path.c"
-    },
-    {
-        "command": "cc -c -Wall -Wextra -pedantic -std=c99 -Werror -Iinclude -O0 -g -fsanitize=address -fno-omit-frame-pointer -o build/text.o src/text.c",
-        "directory": "/data/data/com.termux/files/home/repos/personal/cmcwatch",
-        "file": "/data/data/com.termux/files/home/repos/personal/cmcwatch/src/text.c"
-    }
+  {
+    "arguments": [
+      "/usr/bin/clang-19",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-std=c11",
+      "-Werror",
+      "-Iinclude",
+      "-O0",
+      "-g3",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      "build/fstools.o",
+      "src/fstools.c"
+    ],
+    "directory": "/home/csod4/repos/personal/cmcwatch",
+    "file": "/home/csod4/repos/personal/cmcwatch/src/fstools.c",
+    "output": "/home/csod4/repos/personal/cmcwatch/build/fstools.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang-19",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-std=c11",
+      "-Werror",
+      "-Iinclude",
+      "-O0",
+      "-g3",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/csod4/repos/personal/cmcwatch",
+    "file": "/home/csod4/repos/personal/cmcwatch/src/main.c",
+    "output": "/home/csod4/repos/personal/cmcwatch/build/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang-19",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-std=c11",
+      "-Werror",
+      "-Iinclude",
+      "-O0",
+      "-g3",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      "build/path.o",
+      "src/path.c"
+    ],
+    "directory": "/home/csod4/repos/personal/cmcwatch",
+    "file": "/home/csod4/repos/personal/cmcwatch/src/path.c",
+    "output": "/home/csod4/repos/personal/cmcwatch/build/path.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang-19",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-std=c11",
+      "-Werror",
+      "-Iinclude",
+      "-O0",
+      "-g3",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      "build/vstring.o",
+      "src/vstring.c"
+    ],
+    "directory": "/home/csod4/repos/personal/cmcwatch",
+    "file": "/home/csod4/repos/personal/cmcwatch/src/vstring.c",
+    "output": "/home/csod4/repos/personal/cmcwatch/build/vstring.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/clang-19",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-std=c11",
+      "-Werror",
+      "-Iinclude",
+      "-O0",
+      "-g3",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-c",
+      "-o",
+      "build/watcher.o",
+      "src/watcher.c"
+    ],
+    "directory": "/home/csod4/repos/personal/cmcwatch",
+    "file": "/home/csod4/repos/personal/cmcwatch/src/watcher.c",
+    "output": "/home/csod4/repos/personal/cmcwatch/build/watcher.o"
+  }
 ]

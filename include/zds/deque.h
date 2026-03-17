@@ -9,9 +9,9 @@ typedef struct _ZDeque {
 } ZDeque;
 
 ZVecResult ZDeque_init(ZDeque *deque, size_t count, size_t size);
-ZVecResult ZDeque_push_front(ZDeque *deque, void *elem);
+ZVecResult ZDeque_push_front(ZDeque *deque, const void *elem);
 ZVecResult ZDeque_pop_front(ZDeque *deque, void *out);
-ZVecResult ZDeque_push_back(ZDeque *deque, void *elem);
+ZVecResult ZDeque_push_back(ZDeque *deque, const void *elem);
 ZVecResult ZDeque_pop_back(ZDeque *deque, void *out);
 ZVecResult ZDeque_at(const ZDeque *deque, size_t idx, void *out);
 size_t ZDeque_len(const ZDeque *deque);

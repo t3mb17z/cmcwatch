@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <linux/stat.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,69 +13,63 @@
 #include "watcher.h"
 #include "path.h"
 #include "zds/deque.h"
+#include "zds/stack.h"
 
 /**
  * Watch for source and subdirectories recursively
  *
  * It returns the state of the operation
  */
-void watchdog_init(const VPath *path, int fd, ZDeque *wds) {
+void watchdog_init(const VPath *root, int fd, ZDeque *wds, watchdog_cb cb) {
 
-  char *cpath = NULL;
-  VPath buf;
-  VPath path_copy;
-  VPath_raw(&path_copy, 32);
-  VPath_append(&path_copy, path);
-  size_t root_idx = VPath_name_count(path), cur_idx = root_idx + 1;
+  ZStack stack;
+  ZStack_init(&stack, 4096, sizeof(VPath));
+  ZStack_push(&stack, root);
 
-  ZDeque_init(wds, 4096, sizeof(WatchDescriptor));
-
-  while(cur_idx > root_idx) {
-    cpath = VPath_to_cstr(&path_copy);
+  VPath path, full_path;
+  while(!ZStack_empty(&stack)) {
+    VPath_raw(&path, 32);
+    ZStack_pop(&stack, &path);
+    char *cpath = VPath_to_cstr(&path);
     DIR *dir = opendir(cpath);
     if(dir == NULL) {
-      cur_idx--;
+      free(cpath);
       continue;
     }
 
-    struct dirent *diren;
-    while((diren = readdir(dir)) != NULL) {
-      if(strcmp(diren->d_name, ".") == 0 || strcmp(diren->d_name, "..") == 0)
-        continue;
+    struct dirent *entry;
+    while((entry = readdir(dir)) != NULL) {
+      if(entry->d_type == DT_DIR) {
+        if(strcmp(entry->d_name, ".") == 0 ||
+          strcmp(entry->d_name, "..") == 0)
+          continue;
+        VPath tmp = VPath_from_cstr(entry->d_name);
+        VPath_raw(&full_path, 32);
+        VPath_append(&full_path, &path);
+        VPath_append(&full_path, &tmp);
+        VPath_destroy(&tmp);
+        ZStack_push(&stack, &full_path);
 
-      if(diren->d_type == DT_DIR) {
-        buf = VPath_from_cstr(diren->d_name);
-        VPath_append(&path_copy, &buf);
-        cur_idx++;
-        free(cpath);
-        cpath = NULL;
+        WatchDescriptor tmpwd;
+        char *ctmp = VPath_to_cstr(&full_path);
+        int wd = inotify_add_watch(fd, ctmp, IN_CLOSE_WRITE);
+        tmpwd.wd = wd;
+        VPath_raw(&tmpwd.dirpath, VPath_name_count(&full_path));
+        VPath_append(&tmpwd.dirpath, &full_path);
 
-        cpath = VPath_to_cstr(&path_copy);
-        int wd = inotify_add_watch(fd, cpath,
-          IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE
-        );
-        free(cpath);
-        cpath = NULL;
+        if(cb != NULL)
+          cb(ctmp);
+        free(ctmp);
 
-        WatchDescriptor wdesc = { 0 };
-        wdesc.wd = wd;
-        VPath_append(&wdesc.dirpath, &buf);
+        VPath_destroy(&full_path);
 
-        char *tm = VPath_to_cstr(&buf);
-        printf("Subdirectory found added: %s\n", tm);
-        free(tm);
-
-        ZDeque_push_back(wds, &wdesc);
-
-        break;
+        ZDeque_push_back(wds, &tmpwd);
       }
     }
 
-    cur_idx--;
-    VPath_pop(&path_copy, NULL);
-
-    if(cpath != NULL)
-      free(cpath);
+    VPath_destroy(&path);
+    closedir(dir);
+    free(cpath), cpath = NULL;
   }
 }
 

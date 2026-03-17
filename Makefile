@@ -1,5 +1,5 @@
-CC = clang
-CFLAGS = -Wall -Wextra -pedantic -std=c99 -Werror
+CC = cc
+CFLAGS = -Wall -Wextra -pedantic -std=c11 -Werror
 TARGET = cmcwatch
 
 ARGS ?= 
@@ -34,7 +34,7 @@ TESTS = $(shell find $(TEST_DIR) -name "*.c")
 
 # Compile all right now
 all: $(OBJS)
-	@$(CC) $(LDFLAGS) $(LIBS) $^ -o $(TARGET)
+	@$(CC) $(LIBS) $^ $(LDFLAGS) -o $(TARGET)
 
 $(BLD_DIR)/%.o: $(SRC_DIR)/%.c | $(BLD_DIR)
 	@echo "Compiling file: $< -> $@"

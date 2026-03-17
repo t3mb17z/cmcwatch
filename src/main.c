@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <errno.h>
 #include <stdio.h>
 #include <sys/inotify.h>
@@ -15,7 +16,11 @@
 
 #define MAX_BUF 4096
 
-int main(int argc, char **argv) {
+void print(const char *str) {
+  printf("Found '%s' and added to watchdog!\n", str);
+}
+
+int main(int argc, char *argv[]) {
 
   if(argc < 2 || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr,
@@ -72,7 +77,7 @@ int main(int argc, char **argv) {
   }
 
   ZDeque wds;
-  watchdog_init(&source, fd, &wds);
+  watchdog_init(&source, fd, &wds, print);
   char buffer[4096];
   int nbytes;
   VPath file_path, dest_file, src_file, dest_dir;

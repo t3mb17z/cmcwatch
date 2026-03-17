@@ -14,6 +14,18 @@ VPathResult VPath_init(VPath *path, const VString *text) {
   if(path == NULL || text == NULL)
     return VPATH_EUNSPECIFIED_PATH;
 
+  VString dot = VString_from_bytes("."),
+          dotdot = VString_from_bytes("..");
+  char *cpath = VString_to_cstr(text);
+  if(VString_eq(text, &dot) || VString_eq(text, &dotdot) || memchr(cpath, '/', VString_len(text)) == NULL) {
+    path->_is_absolute = false;
+    ZDeque_init(&path->_segments, VString_len(text), sizeof(VString));
+    ZDeque_push_back(&path->_segments, text);
+    free(cpath), cpath = NULL;
+    return VPATH_OK;
+  }
+  free(cpath), cpath = NULL;
+
   VPath res;
   VString delim = VString_from_bytes("/");
   ZDeque_init(&res._segments, VString_len(text), sizeof(VString));
@@ -24,6 +36,10 @@ VPathResult VPath_init(VPath *path, const VString *text) {
     path->_is_absolute =
       res._is_absolute = false;
   VString_split(text, &delim, &res._segments);
+  if(ZDeque_len(&res._segments) == 1) {
+    memcpy(path, &res, sizeof(VPath));
+    return VPATH_OK;
+  }
   VPath_normalize(&res, path);
 
   return VPATH_OK;
@@ -95,14 +111,16 @@ VPathResult VPath_append(VPath *path1, const VPath *path2) {
     return VPATH_EUNSPECIFIED_PATH;
 
   if(
-    ZDeque_len(&path1->_segments) +
-    ZDeque_len(&path2->_segments) >
+    VPath_name_count(path1) +
+    VPath_name_count(path2) >
     ZDeque_cap(&path1->_segments)
   )
     return VPATH_ENOT_ENOUGH_SPACE;
+  if(VPath_name_count(path1) == 0)
+    path1->_is_absolute = path2->_is_absolute;
 
   VString temp;
-  for(size_t i = 0; i < ZDeque_len(&path2->_segments); i++) {
+  for(size_t i = 0; i < VPath_name_count(path2); i++) {
     ZDeque_at(&path2->_segments, i, &temp);
     ZDeque_push_back(&path1->_segments, &temp);
   }
@@ -148,13 +166,19 @@ char *VPath_to_cstr(const VPath *path) {
 
   if(path->_is_absolute)
     VString_append(&res, &slash);
+  puts("Ok");
   for(size_t i = 0; i < VPath_name_count(path); i++) {
     ZDeque_at(&path->_segments, i, &cur);
+    char *t = VString_to_cstr(&cur);
+    printf("Valid string: %s\n", t);
+    free(t);
     VString_append(&res, &cur);
     VString_append(&res, &slash);
   }
 
-  return VString_to_cstr(&res);
+  char *r = VString_to_cstr(&res);
+  printf("cur: %s\n", r);
+  return r;
 }
 
 VString VPath_to_VString(const VPath *path) {
@@ -197,8 +221,6 @@ VPath VPath_from_cstr(const char *cpath) {
     return (VPath){ 0 };
 
   VPath res;
-  if(*cpath == '/')
-    res._is_absolute = true;
   VString vstr = VString_from_bytes(cpath);
   VPath_init(&res, &vstr);
 
