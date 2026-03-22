@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,21 +13,24 @@
 #include "zds/deque.h"
 
 bool fs_copy(const VPath *to, const VPath *from) {
-  char *in = VPath_to_cstr(to),
-       *out= VPath_to_cstr(from);
+  char *dest = VPath_to_cstr(to),
+       *src = VPath_to_cstr(from);
   char buf[8192];
   ssize_t n;
+  bool res = true;
 
-  int fd_in = open(in, O_RDONLY);
-  int fd_out = open(out, O_WRONLY | O_CREAT | O_TRUNC);
+  int fd_dest = open(dest, O_WRONLY | O_CREAT | O_TRUNC);
+  int fd_src = open(src, O_RDONLY);
 
-  while((n = read(fd_in, buf, sizeof(buf))) > 0) {
+  while ((n = read(fd_src, buf, sizeof(buf))) > 0) {
     char *p = buf;
-    while(n > 0) {
-      ssize_t w = write(fd_out, p, n);
-      if(w < 0) {
-        close(fd_in);
-        close(fd_out);
+    while (n > 0) {
+      ssize_t w = write(fd_dest, p, n);
+      if (w < 0) {
+        free(dest), dest = NULL;
+        free(src), src = NULL;
+        close(fd_dest);
+        close(fd_src);
         return false;
       }
 
@@ -35,20 +39,29 @@ bool fs_copy(const VPath *to, const VPath *from) {
     }
   }
 
-  if(n < 0)
-    return false;
+  if (n < 0)
+    res = false;
 
-  return true;
+  struct stat sb;
+  if (stat(src, &sb) == 0) {
+    chmod(dest, sb.st_mode);
+  }
+
+  free(src);
+  free(dest);
+  close(fd_src);
+  close(fd_dest);
+  return res;
 }
 
 bool fs_mkdir(const VPath *dir, unsigned int mode, bool recursive) {
-  if(dir == NULL)
+  if (dir == NULL)
     return false;
 
   char *path = VPath_to_cstr(dir);
   bool res = false;
-  if(!recursive) {
-    if(mkdir(path, mode) == 0)
+  if (!recursive) {
+    if (mkdir(path, mode) == 0)
       res = true;
 
     free(path);
@@ -56,23 +69,32 @@ bool fs_mkdir(const VPath *dir, unsigned int mode, bool recursive) {
   }
   free(path), path = NULL;
 
-  VString part, full_path;
+  VString part, full_path, slash = VString_from_bytes("/");
   VString_new(&full_path, 4096);
 
   res = true;
-  for(size_t i = 0; i < VPath_name_count(dir); i++) {
+  if(dir->_is_absolute)
+    VString_append(&full_path, &slash);
+  for (size_t i = 0; i < VPath_name_count(dir); i++) {
     ZDeque_at(&dir->_segments, i, &part);
     VString_append(&full_path, &part);
+    VString_append(&full_path, &slash);
     path = VString_to_cstr(&full_path);
-    if(mkdir(path, mode) == 0) {
+    if (mkdir(path, mode) == 0) {
       free(path), path = NULL;
+      VString_destroy(&part);
       continue;
+    } else {
+      if (errno == EEXIST) continue;
+      res = false;
+      free(path);
+      VString_destroy(&part);
+      break;
     }
-
-    res = false;
-    free(path);
-    break;
   }
+
+  VString_destroy(&slash);
+  VString_destroy(&full_path);
 
   return true;
 }

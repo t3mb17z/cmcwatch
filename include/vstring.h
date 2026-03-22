@@ -25,6 +25,7 @@ typedef struct _vstring {
 
 VStringResult VString_new(VString *buffer, size_t cap);
 VStringResult VString_set(VString *buffer, char *text);
+VStringResult VString_copy(VString *dest, const VString *src);
 VStringResult VString_append(VString *buffer, const VString *text);
 VStringResult VString_append_char(VString *buffer, char chr);
 VStringResult VString_split(

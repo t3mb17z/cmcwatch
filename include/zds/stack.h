@@ -9,7 +9,12 @@ typedef struct _ZStack {
   ZVec data;
 } ZStack;
 
-ZVecResult ZStack_init(ZStack *stack, size_t elem_count, size_t elem_size);
+ZVecResult ZStack_init(
+  ZStack *stack,
+  size_t elem_count,
+  size_t elem_size,
+  Zds_copy_fn copy_fn, Zds_drop_fn drop_fn
+);
 ZVecResult ZStack_reserve(ZStack *stack, size_t new_size);
 ZVecResult ZStack_push(ZStack *stack, const void *data);
 ZVecResult ZStack_peek(const ZStack *stack, void *buffer);

@@ -1,28 +1,50 @@
 #define _POSIX_C_SOURCE 200809L
-#include <errno.h>
+#include "zds/vec.h"
+#include <linux/stat.h>
+#include <stdbool.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <sys/inotify.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <poll.h>
 
 #include "fstools.h"
 #include "path.h"
 #include "watcher.h"
 #include "zds/deque.h"
+#include "vsignal.h"
 
 #define BUF_LEN (10 * (sizeof(struct inotify_event) + 256))
 
 #define MAX_BUF 4096
 
+ZVecResult WatchDescriptor_drop(void *elem) {
+  WatchDescriptor *wd = elem;
+  VPath_destroy(&wd->dirpath);
+  wd->wd = -1;
+  return ZVEC_OK;
+}
+
+ZVecResult WatchDescriptor_copy(void *dest, const void *src) {
+  WatchDescriptor *destination = dest;
+  const WatchDescriptor *source = src;
+  VPath_copy(&destination->dirpath, &source->dirpath);
+  destination->wd = source->wd;
+  return ZVEC_OK;
+}
+
 void print(const char *str) {
   printf("Found '%s' and added to watchdog!\n", str);
 }
 
+extern bool sig_handle(void);
+
 int main(int argc, char *argv[]) {
 
-  if(argc < 2 || strcmp(argv[1], "--help") == 0) {
+  if (argc < 2 || strcmp(argv[1], "--help") == 0) {
     fprintf(stderr,
     "Usage %s <src_dir> <dst_dir> <uid> <gid>\n"
     "  Example:\n"
@@ -31,17 +53,22 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if (!sig_handle()) {
+    puts("No SIGINT handle available");
+    return 1;
+  }
+
   VPath source = VPath_from_cstr(argv[1]);
   VPath destination = VPath_from_cstr(argv[2]);
   char *tmp = VPath_to_cstr(&source);
-  if(access(tmp, F_OK) != 0) {
+  if (access(tmp, F_OK) != 0) {
     fprintf(stderr, "Source directory '%s' doesn't exists\n", tmp);
     return 2;
   }
   free(tmp), tmp = NULL;
 
   tmp = VPath_to_cstr(&destination);
-  if(access(tmp, F_OK) != 0) {
+  if (access(tmp, F_OK) != 0) {
     fprintf(stderr, "Destination directory '%s' doesn't exists\n", tmp);
     return 2;
   }
@@ -49,7 +76,7 @@ int main(int argc, char *argv[]) {
 
   char *buf;
   char *uid, *gid;
-  if(argc > 3) {
+  if (argc > 3) {
     uid = strdup(argv[3]);
     gid = strdup(argv[4]);
   } else {
@@ -58,84 +85,80 @@ int main(int argc, char *argv[]) {
   }
 
   int iuid = strtol(uid, &buf, 10);
-  if(*buf != '\0') {
+  if (*buf != '\0') {
     puts("Invalid number at UID");
     return 1;
   }
 
   int igid = strtol(gid, &buf, 10);
-  if(*buf != '\0') {
+  if (*buf != '\0') {
     puts("Invalod number at GID");
     return 1;
   }
   free(uid), free(gid);
   buf = NULL;
 
-  int fd = inotify_init(), count = 0, i = 0;
-  if(fd < 0) {
+  int fd = inotify_init();
+  if (fd < 0) {
     return 1;
   }
 
   ZDeque wds;
+  ZDeque_init(
+    &wds, 4096,
+    sizeof(WatchDescriptor),
+    WatchDescriptor_copy,
+    WatchDescriptor_drop
+  );
   watchdog_init(&source, fd, &wds, print);
-  char buffer[4096];
-  int nbytes;
+
   VPath file_path, dest_file, src_file, dest_dir;
-  VPath_raw(&dest_file, 32);
-  VPath_raw(&src_file, 32);
-  VPath_raw(&dest_dir, 32);
 
   tmp = VPath_to_cstr(&source);
-  printf("Watching source directory: '%s' ...\n", tmp);
+  printf("Watching: '%s' -> ", tmp);
+  free(tmp), tmp = NULL;
+  tmp = VPath_to_cstr(&destination);
+  printf("'%s'\n", tmp);
   free(tmp), tmp = NULL;
 
-  WatchDescriptor wd;
-  while(1) {
-    i = 0, nbytes = read(fd, buffer, BUF_LEN);
-    if(nbytes < 0) {
-      return 1;
+  struct pollfd pfd = {
+    .fd = fd,
+    .events = POLLIN,
+  };
+
+  char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+  const struct inotify_event *event = NULL;
+  ssize_t size = 0;
+  
+  while (is_running()) {
+    int ret = poll(&pfd, 1, 500);
+
+    if (ret > 0) {
+      size = read(fd, buffer, BUF_LEN);
+    } else {
+      continue;
     }
 
-    while(i < nbytes) {
-      struct inotify_event *event = (struct inotify_event *)&buffer[i];
-      if(!(event->mask & IN_CLOSE_WRITE))
-        continue;
+    if (size < 0) {
+      break;
+    }
 
-      if(event->len > 0) {
-        for(int i = 0; i < count; i++) {
-          ZDeque_at(&wds, i, &wd);
-          if(event->wd == wd.wd) {
-            file_path = VPath_from_cstr(event->name);
+    for (char *ptr = buffer; ptr < buffer + size; ptr += sizeof(struct inotify_event) + event->len) {
+      event = (const struct inotify_event *)ptr;
+      for (size_t i = 0; i < ZDeque_len(&wds); i++) {
+        const WatchDescriptor *wd = ZDeque_get(&wds, i);
+        if (event->wd != wd->wd) continue;
+        VPath_raw(&src_file, 32);
+        VPath_raw(&file_path, 32);
+        VPath_raw(&dest_dir, 32);
+        VPath_raw(&dest_file, 32);
 
-            VPath_append(&src_file, &source);
-            VPath_append(&src_file, &wd.dirpath);
-            VPath_append(&src_file, &file_path);
+        VPath_destroy(&src_file);
+        VPath_destroy(&file_path);
+        VPath_destroy(&dest_dir);
+        VPath_destroy(&dest_file);
 
-            VPath_append(&dest_file, &destination);
-            VPath_append(&dest_file, &wd.dirpath);
-            VPath_append(&dest_file, &file_path);
-
-            VPath_append(&dest_dir, &destination);
-            VPath_append(&dest_dir, &wd.dirpath);
-
-            bool success;
-            success = fs_mkdir(&dest_dir, 0700, true);
-            success = fs_copy(&src_file, &dest_file);
-            if(!success) {
-              fprintf(stderr, "Error: %s\n", strerror(errno));
-            } else {
-              tmp = VPath_to_cstr(&dest_file);
-              buf = VPath_to_cstr(&src_file);
-              printf("Done with '%s' -> '%s'\n", buf, tmp);
-              free(tmp), tmp = NULL;
-              free(buf), buf = NULL;
-
-              tmp = VPath_to_cstr(&dest_dir);
-              chown(tmp, iuid, igid);
-            }
-          }
-        }
-        i += (sizeof(struct inotify_event)) + event->len;
+        (void)iuid, (void)igid;
       }
     }
   }

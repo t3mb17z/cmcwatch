@@ -9,8 +9,9 @@
 
 typedef enum _vpath_res {
   VPATH_OK = 0,
-  VPATH_EUNSPECIFIED_PATH,
-  VPATH_ENOT_ENOUGH_SPACE,
+  VPATH_ERR_UNSPECIFIED_PATH,
+  VPATH_ERR_NOT_ENOUGH_SPACE,
+  VPATH_ERR_COPY
 } VPathResult;
 
 typedef struct _vpath {
@@ -19,12 +20,13 @@ typedef struct _vpath {
 } VPath;
 
 VPathResult VPath_init(VPath *path, const VString *text);
-VPathResult VPath_normalize(const VPath *path, VPath *detspath);
+VPathResult VPath_normalize(VPath *path, const VPath *detspath);
 VPathResult VPath_join(
+  VPath *destpath,
   const VPath *path1,
-  const VPath *path2,
-  VPath *destpath
+  const VPath *path2
 );
+VPathResult VPath_copy(VPath *dest, const VPath *src);
 VPathResult VPath_append(VPath *path1, const VPath *path2);
 VPathResult VPath_shift(VPath *path, VString *dest);
 VPathResult VPath_pop(VPath *path, VString *dest);
