@@ -1,4 +1,4 @@
-CC = cc
+CC ?= cc
 CFLAGS = -Wall -Wextra -pedantic -std=c11 -Werror
 TARGET = cmcwatch
 
