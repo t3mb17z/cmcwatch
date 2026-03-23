@@ -160,7 +160,7 @@ VStringResult VString_replace(
 }
 
 char VString_at(const VString *buffer, size_t idx) {
-  if (idx > buffer->_len || idx < 0)
+  if (idx > buffer->_len)
     return 0;
   return buffer->_buffer[idx];
 }

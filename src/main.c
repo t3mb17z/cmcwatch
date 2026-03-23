@@ -1,6 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
 #include "zds/vec.h"
-#include <linux/stat.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <stdio.h>

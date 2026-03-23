@@ -1,7 +1,9 @@
-#include "vsignal.h"
+#define _POSIX_C_SOURCE 200809L
 #include <signal.h>
 #include <stdbool.h>
 #include <unistd.h>
+
+#include "vsignal.h"
 
 volatile sig_atomic_t running = 1;
 

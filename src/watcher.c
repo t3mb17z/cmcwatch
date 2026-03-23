@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#include <linux/stat.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

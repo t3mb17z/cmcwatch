@@ -5,6 +5,7 @@ TARGET = cmcwatch
 ARGS ?= 
 
 BUILD ?= debug
+TYPE ?= static
 
 LIBS_RAW = 
 LIBS = $(patsubst %,-l%, $(LIBS_RAW))
@@ -18,6 +19,13 @@ TEST_DIR = tests
 INC_DIRS = $(patsubst %,-I%, $(INC_DIRS_RAW))
 CFLAGS += $(INC_DIRS)
 LDFLAGS =
+
+ifeq ($(TYPE),)
+	A =
+else
+	CFLAGS += -static
+	LDFLAGS += -static
+endif
 
 ifeq ($(BUILD),release)
 	CFLAGS += -O3
