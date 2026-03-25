@@ -1,1 +1,6 @@
-.cache
+.cache/
+lib/
+cmcwatch
+compile_commands.json
+build/
+tests/paths

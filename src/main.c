@@ -10,7 +10,6 @@
 #include <libgen.h>
 #include <poll.h>
 
-#include "fstools.h"
 #include "path.h"
 #include "watcher.h"
 #include "zds/deque.h"
