@@ -13,14 +13,14 @@ LIBS = $(patsubst %,-l%, $(LIBS_RAW))
 # Define source directory
 SRC_DIR = src
 BLD_DIR = build
-INC_DIRS_RAW = include
+INC_DIRS_RAW = include lib/zds/include
 TEST_DIR = tests
 
 INC_DIRS = $(patsubst %,-I%, $(INC_DIRS_RAW))
 CFLAGS += $(INC_DIRS)
 LDFLAGS =
 
-ifeq ($(TYPE),)
+ifeq ($(TYPE),dyn)
 	A =
 else
 	CFLAGS += -static

@@ -4,8 +4,8 @@
 #include "path.h"
 
 typedef struct _wd {
-  int wd;
-  VPath dirpath;
+    int wd;
+    VPath dirpath;
 } WatchDescriptor;
 
 typedef void (*watchdog_cb)(const char *str);

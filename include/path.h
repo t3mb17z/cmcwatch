@@ -4,27 +4,27 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "zds/deque.h"
+#include "core/deque.h"
 #include "vstring.h"
 
 typedef enum _vpath_res {
-  VPATH_OK = 0,
-  VPATH_ERR_UNSPECIFIED_PATH,
-  VPATH_ERR_NOT_ENOUGH_SPACE,
-  VPATH_ERR_COPY
+    VPATH_OK = 0,
+    VPATH_ERR_UNSPECIFIED_PATH,
+    VPATH_ERR_NOT_ENOUGH_SPACE,
+    VPATH_ERR_COPY
 } VPathResult;
 
 typedef struct _vpath {
-  ZDeque _segments;
-  bool _is_absolute;
+    ZDeque *_segments;
+    bool _is_absolute;
 } VPath;
 
 VPathResult VPath_init(VPath *path, const VString *text);
 VPathResult VPath_normalize(VPath *path, const VPath *detspath);
 VPathResult VPath_join(
-  VPath *destpath,
-  const VPath *path1,
-  const VPath *path2
+    VPath *destpath,
+    const VPath *path1,
+    const VPath *path2
 );
 VPathResult VPath_copy(VPath *dest, const VPath *src);
 VPathResult VPath_append(VPath *path1, const VPath *path2);
