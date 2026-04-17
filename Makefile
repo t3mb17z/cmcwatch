@@ -22,16 +22,21 @@ LDFLAGS =
 
 ifeq ($(TYPE),dyn)
 	A =
-else
+endif
+ifeq ($(TYPE),static)
 	CFLAGS += -static
 	LDFLAGS += -static
 endif
 
 ifeq ($(BUILD),release)
 	CFLAGS += -O3
-else
+endif
+ifeq ($(BUILD),debug)
 	CFLAGS += -O0 -g3 -fsanitize=address,undefined -fno-omit-frame-pointer
 	LDFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
+endif
+ifeq ($(BUILD),reldeb)
+	CFLAGS += -g3 -O0
 endif
 
 LDFLAGS += -Llib -lzds

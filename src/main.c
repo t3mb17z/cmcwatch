@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-#include <linux/time.h>
 #include <time.h>
 #include <stdbool.h>
 #include <sys/stat.h>
