@@ -4,6 +4,7 @@ TARGET = cmcwatch
 
 ARGS ?= 
 
+# User specifies options
 BUILD ?= debug
 TYPE ?= static
 
@@ -13,7 +14,7 @@ LIBS = $(patsubst %,-l%, $(LIBS_RAW))
 # Define source directory
 SRC_DIR = src
 BLD_DIR = build
-INC_DIRS_RAW = include lib/zds/include
+INC_DIRS_RAW = include lib/zds
 TEST_DIR = tests
 
 INC_DIRS = $(patsubst %,-I%, $(INC_DIRS_RAW))
@@ -39,7 +40,7 @@ ifeq ($(BUILD),reldeb)
 	CFLAGS += -g3 -O0
 endif
 
-LDFLAGS += -Llib -lzds
+LDFLAGS += -Llib -lzds -L ${HOME}/.local/usr/lib
 
 SRCS = $(shell find $(SRC_DIR) -name "*.c")
 OBJS = $(patsubst $(SRC_DIR)/%.c,$(BLD_DIR)/%.o, $(SRCS))
